@@ -53,12 +53,31 @@ function LoginForm(this: FC) {
   )
 }
 
-function HomePage() {
+function HomePage(this: FC<{}, {}, { auth: { email: string } }>) {
   return (
     <>
-      <Button label="Go to login" type="link" href="/login" />
+      {this.context.auth.email ? (
+        <>
+          <p>Hi, {this.context.auth.email}</p>
+          <Button label="Logout" type="link" href="/logout" />
+        </>
+      ) : (
+        <Button label="Go to login" type="link" href="/login" />
+      )}
     </>
   )
+}
+
+async function doAuth(req: Request) {
+  const cookie = req.headers.get("cookie") || "";
+  const match = cookie.match(/auth_email=([^;]+)/);
+  const email = match ? decodeURIComponent(match[1]) : "";
+  console.log(match)
+  console.log(email)
+  return {
+    email,
+    isAuthenticated: !!email
+  };
 }
 
 export default {
@@ -97,51 +116,66 @@ export default {
 
         return (
           <html
-            request={req}
             status={authorized ? 200 : 401}
+            headers={authorized ? {
+              "Set-Cookie": `auth_email=${encodeURIComponent(email)}; Path=/; HttpOnly`,
+            } : {}}
           >
             <body>
-              {authorized ? (
-                <>
-                  <h1>Hi, {email}!</h1>
-                  <p>You have logged in successfully.</p>
-                </>
-              ) : (
-                <>
-                  <h1>Access denied</h1>
-                  <p>Invalid credentials.</p>
-                  <Button label="Try again" type="link" href="/login" />
-                </>
-              )}
+              {authorized
+                ? <h1>Welcome, {email}!</h1>
+                : <>
+                    <h1>Access denied</h1>
+                    <a href="/">Try again</a>
+                  </>
+              }
             </body>
           </html>
         );
       }
 
-      // Handle GET request - show login form
+      // GET /login fallback
       return (
         <html>
           <body>
-            <h1>Login page</h1>
             <LoginForm />
           </body>
         </html>
       );
-    }
+    },
+
+    "/logout": (req) => {
+      return (
+        <html
+          headers={{
+            "Set-Cookie": "auth_email=; Path=/; HttpOnly; Expires=Thu, 01 Jan 1970 00:00:00 GMT",
+          }}
+        >
+          <body>
+            <h1>Logged out</h1>
+            <Button label="Go back" type="link" href="/" />
+          </body>
+        </html>
+      );
+    },
   },
 
-  fetch: (req) => {
-    const auth = { email: "" }
+  fetch: async (req) => {
+    const auth = await doAuth(req);
+
     return (
       <html
         request={req}
-        status={200}
         context={{ auth }}
+        status={200}
       >
         <body>
-          <HomePage />
+          {auth.isAuthenticated
+            ? <HomePage />
+            : <LoginForm />
+          }
         </body>
       </html>
-    )
+    );
   }
 }
