@@ -72,8 +72,7 @@ async function doAuth(req: Request) {
   const cookie = req.headers.get("cookie") || "";
   const match = cookie.match(/auth_email=([^;]+)/);
   const email = match ? decodeURIComponent(match[1]) : "";
-  console.log(match)
-  console.log(email)
+  
   return {
     email,
     isAuthenticated: !!email
