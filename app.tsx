@@ -61,10 +61,10 @@ function LogoutForm(this: FC) {
   )
 }
 
-function Form(this: FC, 
-  props: { 
-    action: string, 
-    method: "POST" | "GET" 
+function Form(this: FC,
+  props: {
+    action: string,
+    method: "POST" | "GET"
     children: any
   }) {
   return (
@@ -145,15 +145,15 @@ export default {
               {authorized
                 ? <h1>Welcome, {email}!</h1>
                 : <>
-                    <h1>Access denied</h1>
-                    <a href="/">Try again</a>
-                  </>
+                  <h1>Access denied</h1>
+                  <a href="/">Try again</a>
+                </>
               }
             </body>
           </html>
         );
       },
-      
+
       GET: (req: Request) => {
         return (
           <html>
@@ -178,25 +178,23 @@ export default {
           </body>
         </html>
       );
-    },
+    }
   },
 
   fetch: async (req) => {
-    const auth = await doAuth(req);
+    const url = new URL(req.url);
 
-    return (
-      <html
-        request={req}
-        context={{ auth }}
-        status={200}
-      >
-        <body>
-          {auth.isAuthenticated
-            ? <HomePage />
-            : <LoginForm />
-          }
-        </body>
-      </html>
-    );
+    if (url.pathname === "/") {
+      const auth = await doAuth(req);
+      return (
+        <html request={req} context={{ auth }} status={200}>
+          <body>
+            {auth.isAuthenticated ? <HomePage /> : <LoginForm />}
+          </body>
+        </html>
+      );
+    }
+
+    return new Response("404 Not Found", { status: 404 });
   }
 }
