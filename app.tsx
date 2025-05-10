@@ -43,12 +43,33 @@ function Button(this: FC<{ type?: "submit" | "link" | "button", label: string, h
 
 function LoginForm(this: FC) {
   return (
-    <form action="/login" method="POST">
+    <Form action="/login" method="POST">
       <div>
         <Input name="email" value="" type="email" label="Email" />
         <Input name="password" value="" type="password" label="Password" />
       </div>
       <Button label="Login" type="submit" />
+    </Form>
+  )
+}
+
+function LogoutForm(this: FC) {
+  return (
+    <Form action="/logout" method="POST">
+      <Button label="Logout" type="submit" />
+    </Form>
+  )
+}
+
+function Form(this: FC, 
+  props: { 
+    action: string, 
+    method: "POST" | "GET" 
+    children: any
+  }) {
+  return (
+    <form action={props.action} method={props.method}>
+      {props.children}
     </form>
   )
 }
@@ -59,7 +80,7 @@ function HomePage(this: FC<{}, {}, { auth: { email: string } }>) {
       {this.context.auth.email ? (
         <>
           <p>Hi, {this.context.auth.email}</p>
-          <Button label="Logout" type="link" href="/logout" />
+          <LogoutForm />
         </>
       ) : (
         <Button label="Go to login" type="link" href="/login" />
@@ -69,10 +90,11 @@ function HomePage(this: FC<{}, {}, { auth: { email: string } }>) {
 }
 
 async function doAuth(req: Request) {
+  console.log("doAuth", req.headers.get("cookie"));
   const cookie = req.headers.get("cookie") || "";
   const match = cookie.match(/auth_email=([^;]+)/);
   const email = match ? decodeURIComponent(match[1]) : "";
-  
+
   return {
     email,
     isAuthenticated: !!email
@@ -96,9 +118,8 @@ export default {
       }
     ]),
 
-    "/login": async (req) => {
-      // Handle POST request
-      if (req.method === 'POST') {
+    "/login": {
+      POST: async (req: Request) => {
         const formData = await req.formData();
         const email = formData.get("email");
         const password = formData.get("password");
@@ -131,16 +152,17 @@ export default {
             </body>
           </html>
         );
+      },
+      
+      GET: (req: Request) => {
+        return (
+          <html>
+            <body>
+              <LoginForm />
+            </body>
+          </html>
+        );
       }
-
-      // GET /login fallback
-      return (
-        <html>
-          <body>
-            <LoginForm />
-          </body>
-        </html>
-      );
     },
 
     "/logout": (req) => {
