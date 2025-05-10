@@ -89,8 +89,20 @@ function HomePage(this: FC<{}, {}, { auth: { email: string } }>) {
   )
 }
 
+async function requireAuth(req: Request, next: (auth: any) => JSX.Element | Response) {
+  const auth = await doAuth(req);
+
+  if (!auth.isAuthenticated) {
+    return new Response(null, {
+      status: 302,
+      headers: { Location: "/login" },
+    });
+  }
+
+  return next(auth);
+}
+
 async function doAuth(req: Request) {
-  console.log("doAuth", req.headers.get("cookie"));
   const cookie = req.headers.get("cookie") || "";
   const match = cookie.match(/auth_email=([^;]+)/);
   const email = match ? decodeURIComponent(match[1]) : "";
@@ -103,6 +115,16 @@ async function doAuth(req: Request) {
 
 export default {
   routes: {
+    "/profile": (req: Request) => requireAuth(req, (auth) => (
+      <html>
+        <body>
+          <h1>Perfil</h1>
+          <p>Email: {auth.email}</p>
+          <Button label="Logout" type="link" href="/logout" />
+        </body>
+      </html>
+    )),
+
     "/api/users": req => Response.json([
       {
         "email": "user1@example.com",
@@ -185,14 +207,13 @@ export default {
     const url = new URL(req.url);
 
     if (url.pathname === "/") {
-      const auth = await doAuth(req);
-      return (
+      return requireAuth(req, (auth: { email: string, isAuthenticated: boolean }) => (
         <html request={req} context={{ auth }} status={200}>
           <body>
-            {auth.isAuthenticated ? <HomePage /> : <LoginForm />}
+            <HomePage />
           </body>
         </html>
-      );
+      ));
     }
 
     return new Response("404 Not Found", { status: 404 });
