@@ -134,24 +134,24 @@ export default {
 
         const authorized = !!user;
 
-        return (
-          <html
-            status={authorized ? 200 : 401}
-            headers={authorized ? {
-              "Set-Cookie": `auth_email=${encodeURIComponent(email)}; Path=/; HttpOnly`,
-            } : {}}
-          >
-            <body>
-              {authorized
-                ? <h1>Welcome, {email}!</h1>
-                : <>
-                  <h1>Access denied</h1>
-                  <a href="/">Try again</a>
-                </>
-              }
-            </body>
-          </html>
-        );
+        if (!authorized) {
+          return (
+            <html status={401}>
+              <body>
+                <h1>Access denied</h1>
+                <a href="/">Try again</a>
+              </body>
+            </html>
+          );
+        }
+
+        return new Response(null, {
+          status: 302,
+          headers: {
+            "Location": "/",
+            "Set-Cookie": `auth_email=${encodeURIComponent(email)}; Path=/; HttpOnly`,
+          },
+        });
       },
 
       GET: (req: Request) => {
@@ -165,7 +165,7 @@ export default {
       }
     },
 
-    "/logout": (req) => {
+    "/logout": (req: Request) => {
       return (
         <html
           headers={{
@@ -181,7 +181,7 @@ export default {
     }
   },
 
-  fetch: async (req) => {
+  fetch: async (req: Request) => {
     const url = new URL(req.url);
 
     if (url.pathname === "/") {
